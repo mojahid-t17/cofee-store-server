@@ -24,7 +24,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 const CofeeCollection=client.db('Cofee-store').collection('cofees');
 const UserCollection=client.db('Cofee-store').collection('Users');
 
@@ -41,12 +41,17 @@ app.get('/users',async(req,res)=>{
   const result=await users.toArray();
   res.send(result)
 })
-// crud operation for cofee
-app.get('/cofees',async(req,res)=>{
-    const cofee=CofeeCollection.find();
-    const result=await cofee.toArray();
-    res.send(result)
-})
+// CRUD operation for coffee
+app.get('/cofees', async (req, res) => {
+  try {
+    const cofee = CofeeCollection.find();
+    const result = await cofee.toArray();
+    res.send(result);
+  } catch (error) {
+    console.error('Error fetching coffees:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
 app.get('/cofees/:id', async(req,res)=>{
   const id=req.params.id;
   const cofee={_id: new ObjectId(id)}
@@ -86,7 +91,7 @@ app.post('/cofees',async(req,res)=>{
  })
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
