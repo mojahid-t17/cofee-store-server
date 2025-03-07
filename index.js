@@ -1,19 +1,18 @@
-const express = require('express');
-const app = express();
-const cors = require('cors');
-require('dotenv').config();
+const express = require("express");
+const cors = require("cors");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+require("dotenv").config();
+
+const app = express(); // ✅ Define Express app
 const port = process.env.PORT || 5000;
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
-app.use(express.json());
-
-// Define CORS options
+// Middleware
 const corsOptions = {
-  origin: ['http://localhost:5000', 'https://cofee-store-b9f7b.web.app/'], // Add allowed domains
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: ["http://localhost:5173", "https://cofee-store-b9f7b.web.app"],
+  credentials: true,
+  operationSuccessStatus: 200,
 };
-
+app.use(express.json());
 app.use(cors(corsOptions));
 
 const USER_NAME = process.env.USER_NAME;
@@ -21,6 +20,7 @@ const USER_PASS = process.env.USER_PASS;
 
 const uri = `mongodb+srv://${USER_NAME}:${USER_PASS}@cluster0.mtjlx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
+// Create MongoClient
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -31,86 +31,75 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    const CofeeCollection = client.db('Cofee-store').collection('cofees');
-    const UserCollection = client.db('Cofee-store').collection('Users');
+    await client.connect(); // Ensure the DB connects
 
-    // Create user
-    app.post('/users', async (req, res) => {
+    const CofeeCollection = client.db("Cofee-store").collection("cofees");
+    const UserCollection = client.db("Cofee-store").collection("Users");
+
+    // Routes...
+    app.post("/users", async (req, res) => {
       const user = req.body;
       const result = await UserCollection.insertOne(user);
       res.send(result);
     });
 
-    // Display users
-    app.get('/users', async (req, res) => {
-      const users = UserCollection.find();
-      const result = await users.toArray();
-      res.send(result);
+    app.get("/users", async (req, res) => {
+      const users = await UserCollection.find().toArray();
+      res.send(users);
     });
 
-    // CRUD operations for coffee
-    app.get('/cofees', async (req, res) => {
+    app.get("/cofees", async (req, res) => {
       try {
-        const cofee = CofeeCollection.find();
-        const result = await cofee.toArray();
-        res.send(result);
+        const cofee = await CofeeCollection.find().toArray();
+        res.send(cofee);
       } catch (error) {
-        console.error('Error fetching coffees:', error);
-        res.status(500).send('Internal Server Error');
+        console.error("Error fetching coffees:", error);
+        res.status(500).send("Internal Server Error");
       }
     });
 
-    app.get('/cofees/:id', async (req, res) => {
+    app.get("/cofees/:id", async (req, res) => {
       const id = req.params.id;
-      const cofee = { _id: new ObjectId(id) };
-      const result = await CofeeCollection.findOne(cofee);
+      const result = await CofeeCollection.findOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
-    app.put('/cofees/:id', async (req, res) => {
+    app.put("/cofees/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: new ObjectId(id) };
-      const options = { upsert: true };
       const updatedCofee = req.body;
-      const cofee = {
-        $set: {
-          name: updatedCofee.name,
-          chef: updatedCofee.chef,
-          supplier: updatedCofee.supplier,
-          taste: updatedCofee.taste,
-          category: updatedCofee.category,
-          details: updatedCofee.details,
-          photourl: updatedCofee.photourl,
-        },
-      };
-      const result = await CofeeCollection.updateOne(filter, cofee, options);
+      const result = await CofeeCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: updatedCofee },
+        { upsert: true }
+      );
       res.send(result);
     });
 
-    app.post('/cofees', async (req, res) => {
+    app.post("/cofees", async (req, res) => {
       const cofee = req.body;
       const result = await CofeeCollection.insertOne(cofee);
       res.send(result);
     });
 
-    app.delete('/cofees/:id', async (req, res) => {
+    app.delete("/cofees/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await CofeeCollection.deleteOne(query);
+      const result = await CofeeCollection.deleteOne({ _id: new ObjectId(id) });
       res.send(result);
     });
 
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // await client.close();
+    console.log("Connected to MongoDB!");
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
   }
 }
 run().catch(console.dir);
 
-app.get('/', (req, res) => {
-  res.send('Welcome to Coffee Store Server');
+// Root Route
+app.get("/", (req, res) => {
+  res.send("Welcome to Coffee Store Server");
 });
 
+// Start the Server
 app.listen(port, () => {
-  console.log(`Server connected on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
