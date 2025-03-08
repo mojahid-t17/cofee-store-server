@@ -87,7 +87,7 @@ DELETE /cofees/{id}
 git clone https://github.com/mojahid-t17/cofee-store-server.git
 
 # Install dependencies
-npm install
+npm i cors express cors dotenv
 
 # Create a .env file and add MongoDB credentials
 USER_NAME=yourMongoDBUsername
